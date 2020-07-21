@@ -7,8 +7,12 @@
 //
 
 import UIKit
+import StoreKit
 
-class QuoteTableViewController: UITableViewController {
+class QuoteTableViewController: UITableViewController, SKPaymentTransactionObserver {
+    
+    //product ID from when we created app on App Store Connect
+    let productID = "com.barnoldcoding.InspoQuotes.PremiumQuotes"
     
     var quotesToShow = [
         "Our greatest glory is not in never falling, but in rising every time we fall. — Confucius",
@@ -27,91 +31,137 @@ class QuoteTableViewController: UITableViewController {
         "Your true success in life begins only when you make the commitment to become excellent at what you do. — Brian Tracy",
         "Believe in yourself, take on your challenges, dig deep within yourself to conquer fears. Never let anyone bring you down. You got to keep going. – Chantal Sutherland"
     ]
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
-
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem
-    }
-
-    // MARK: - Table view data source
-
-    override func numberOfSections(in tableView: UITableView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
-        return 0
-    }
-
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
-        return 0
-    }
-
-    /*
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier", for: indexPath)
-
-        // Configure the cell...
-
-        return cell
-    }
-    */
-
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            // Delete the row from the data source
-            tableView.deleteRows(at: [indexPath], with: .fade)
-        } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
-    }
-    */
-
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(_ tableView: UITableView, canMoveRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-    
-    
-    
-    
-    
-    @IBAction func restorePressed(_ sender: UIBarButtonItem) {
+        
+        SKPaymentQueue.default().add(self)
+        
+        if isPurchased() {
+            showPremiumQuotes()
+        }
         
     }
-
-
+    
+    // MARK: - Table view data source
+    
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if isPurchased() {
+            return quotesToShow.count
+        } else {
+        return quotesToShow.count + 1
+        }
+    }
+    
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "QuoteCell", for: indexPath)
+        
+        if indexPath.row < quotesToShow.count {
+            cell.textLabel?.text = quotesToShow[indexPath.row]
+            cell.textLabel?.numberOfLines = 0
+            cell.textLabel?.textColor = #colorLiteral(red: 0.6000000238, green: 0.6000000238, blue: 0.6000000238, alpha: 1)
+            cell.accessoryType = .none
+        } else {
+            cell.textLabel?.text = "Get More Quotes"
+            cell.textLabel?.textColor = #colorLiteral(red: 0.1479147375, green: 0.6428351402, blue: 0.7288122177, alpha: 1)
+            cell.accessoryType = .disclosureIndicator
+        }
+        
+        
+        return cell
+    }
+    
+    //MARK: - Tableview Delegate Methods
+    
+    override func tableView(_ tableView: UITableView, didHighlightRowAt indexPath: IndexPath) {
+        if indexPath.row == quotesToShow.count {
+            buyPremiumQuotes()
+        }
+        
+        //deselects cell with a quick animation
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+    //MARK: - In-App Purchase Methods
+    
+    func buyPremiumQuotes() {
+        if SKPaymentQueue.canMakePayments() {
+            //Can make payments
+            
+            let paymentRequest = SKMutablePayment()
+            paymentRequest.productIdentifier = productID
+            SKPaymentQueue.default().add(paymentRequest)
+            
+        } else {
+            //Can't make payment
+            print("User can't make payments.")
+        }
+    }
+    
+    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+        for tranaction in transactions {
+            if tranaction.transactionState == .purchased {
+                //User payment successful
+                print("Transaction successful")
+                
+                showPremiumQuotes()
+               
+                //MUST finish the transaction regardless if successful or not!
+                SKPaymentQueue.default().finishTransaction(tranaction)
+                
+            } else if tranaction.transactionState == .failed {
+                
+                //User payment failed/cancelled
+                print("Transaction failed")
+                
+                if let error = tranaction.error {
+                    let errorDescription = error.localizedDescription
+                    print("Transaction failed due to error, \(errorDescription)")
+                }
+                SKPaymentQueue.default().finishTransaction(tranaction)
+                
+                //User restores previously purchased in-app purchase
+            } else if tranaction.transactionState == .restored {
+                showPremiumQuotes()
+                print("Transaction Restored")
+                
+                //Restore button hides after purchases have been restored
+                navigationItem.setRightBarButton(nil, animated: true)
+                
+                SKPaymentQueue.default().finishTransaction(tranaction)
+            }
+        }
+    }
+    
+    
+    
+    //addes all quotes now that user has purchased in-app purchase
+    func showPremiumQuotes() {
+        
+        //Checks to see if user has already purchased in-app purchase
+        UserDefaults.standard.set(true, forKey: productID)
+        
+        quotesToShow.append(contentsOf: premiumQuotes)
+        tableView.reloadData()
+    }
+    
+    //check to see if user has already purchased the in-app purchase
+    func isPurchased() -> Bool {
+        let purchaseStatus = UserDefaults.standard.bool(forKey: productID)
+        
+        if purchaseStatus {
+            print("Previously purchased Premium Quotes")
+            return true
+        } else {
+            print("Never Purchased")
+            return false
+        }
+        
+    }
+    
+    @IBAction func restorePressed(_ sender: UIBarButtonItem) {
+        SKPaymentQueue.default().restoreCompletedTransactions()
+    }
+    
+    
 }
