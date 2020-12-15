@@ -40,11 +40,9 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         if isPurchased() {
             showPremiumQuotes()
         }
-        
     }
     
-    // MARK: - Table view data source
-    
+    // MARK: - Table view data source    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if isPurchased() {
             return quotesToShow.count
@@ -52,8 +50,7 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         return quotesToShow.count + 1
         }
     }
-    
-    
+        
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "QuoteCell", for: indexPath)
         
@@ -67,8 +64,7 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
             cell.textLabel?.textColor = #colorLiteral(red: 0.1479147375, green: 0.6428351402, blue: 0.7288122177, alpha: 1)
             cell.accessoryType = .disclosureIndicator
         }
-        
-        
+    
         return cell
     }
     
@@ -133,8 +129,6 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         }
     }
     
-    
-    
     //addes all quotes now that user has purchased in-app purchase
     func showPremiumQuotes() {
         
@@ -156,12 +150,9 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
             print("Never Purchased")
             return false
         }
-        
     }
     
     @IBAction func restorePressed(_ sender: UIBarButtonItem) {
         SKPaymentQueue.default().restoreCompletedTransactions()
     }
-    
-    
 }
